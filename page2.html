@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Subtitle Translator</title>
+    <link rel="stylesheet" href="c.css">
+</head>
+<body>
+  <div class="background-box"></div>
+
+    <div class="page-header">
+        <h1>Video Subtitle Translator</h1>
+        <a href="index.html">Go to home</a>
+    </div>
+    
+    <div class="container">
+        <!-- Left Side - Control Panel -->
+        <div class="control-panel">
+            <div class="app-title">Upload & Controls</div>
+            
+            <div class="upload-section">
+                <label for="videoFile">Upload Video</label>
+                <input type="file" id="videoFile" accept="video/*">
+                
+                <label for="sourceLanguage">Source Language</label>
+                <select id="sourceLanguage">
+                    <option value="auto">Auto-detect</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="hi">Hindi</option>
+                    <option value="te">Telugu</option>
+                </select>
+                
+                <label for="targetLanguage">Translate Subtitles To</label>
+                <select id="targetLanguage">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="hi">Hindi</option>
+                    <option value="te">Telugu</option>
+                </select>
+                
+                <button id="processButton">Generate Subtitles</button>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="status">Processing video...</div>
+                </div>
+                
+                <div class="error" id="errorMessage"></div>
+            </div>
+            
+            <div class="subtitle-controls">
+                <label>Available Subtitle Languages:</label>
+                <div class="language-badges" id="languageBadges">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Side - Video Player -->
+        <div class="video-panel">
+            <div class="video-container">
+                <video id="videoPlayer" controls>
+                    Your browser does not support HTML5 video.
+                </video>
+                <div class="subtitle-container">
+                    <div class="subtitle-text" id="subtitleText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Your existing JavaScript remains unchanged
+        // DOM Elements
+        const videoFileInput = document.getElementById('videoFile');
+        const sourceLanguageSelect = document.getElementById('sourceLanguage');
+        const targetLanguageSelect = document.getElementById('targetLanguage');
+        const processButton = document.getElementById('processButton');
+        const progressContainer = document.querySelector('.progress-container');
+        const progressFill = document.querySelector('.progress-fill');
+        const statusText = document.querySelector('.status');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const subtitleText = document.getElementById('subtitleText');
+        const languageBadges = document.getElementById('languageBadges');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Global variables
+        let videoObjectURL = null;
+        let subtitles = {};
+        let currentSubtitleLanguage = null;
+        let activeSubtitleInterval = null;
+
+        // Process video upload
+        videoFileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                if (videoObjectURL) {
+                    URL.revokeObjectURL(videoObjectURL);
+                }
+                
+                const videoBlob = e.target.files[0];
+                videoObjectURL = URL.createObjectURL(videoBlob);
+                videoPlayer.src = videoObjectURL;
+                
+                // Reset subtitle-related data
+                subtitleText.textContent = '';
+                subtitles = {};
+                languageBadges.innerHTML = '';
+                errorMessage.textContent = '';
+                
+                // Enable the process button
+                processButton.disabled = false;
+            }
+        });
+
+        // Extract audio from video using Web Audio API
+        async function extractAudioFromVideo(videoBlob) {
+            return new Promise((resolve, reject) => {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const tempVideo = document.createElement('video');
+                tempVideo.src = URL.createObjectURL(videoBlob);
+                
+                tempVideo.onloadedmetadata = async () => {
+                    try {
+                        // For newer browsers that support captureStream
+                        if (tempVideo.captureStream) {
+                            const stream = tempVideo.captureStream();
+                            const audioTrack = stream.getAudioTracks()[0];
+                            
+                            if (!audioTrack) {
+                                // Try alternative method if no audio track found
+                                resolve(videoBlob); // Simplified fallback
+                                return;
+                            }
+                            
+                            const audioStream = new MediaStream([audioTrack]);
+                            const mediaRecorder = new MediaRecorder(audioStream, {
+                                mimeType: 'audio/webm; codecs=opus'
+                            });
+                            const audioChunks = [];
+                            
+                            mediaRecorder.ondataavailable = event => {
+                                if (event.data.size > 0) {
+                                    audioChunks.push(event.data);
+                                }
+                            };
+                            
+                            mediaRecorder.onstop = () => {
+                                const audioBlob = new Blob(audioChunks, { type: 'audio/webm; codecs=opus' });
+                                resolve(audioBlob);
+                                URL.revokeObjectURL(tempVideo.src);
+                            };
+                            
+                            mediaRecorder.start();
+                            tempVideo.play();
+                            
+                            // Record a portion of the video (up to 60 seconds for demo)
+                            const recordDuration = Math.min(tempVideo.duration, 60) * 1000;
+                            setTimeout(() => {
+                                tempVideo.pause();
+                                mediaRecorder.stop();
+                            }, recordDuration);
+                        } else {
+                            // Fallback for browsers without captureStream
+                            resolve(videoBlob);
+                        }
+                    } catch (error) {
+                        console.error("Error extracting audio:", error);
+                        reject(error);
+                    }
+                };
+                
+                tempVideo.onerror = () => {
+                    reject(new Error("Error loading video"));
+                    URL.revokeObjectURL(tempVideo.src);
+                };
+            });
+        }
+
+        // Sync and display subtitles during video playback
+        function syncSubtitles(subtitleData) {
+            // Clear any existing subtitle sync
+            if (activeSubtitleInterval) {
+                clearInterval(activeSubtitleInterval);
+            }
+            
+            if (!subtitleData) {
+                console.error("Invalid subtitle data for sync");
+                return;
+            }
+            
+            // Force segments to be available
+            const segments = subtitleData.segments || [];
+            if (!segments.length && subtitleData.translated_text) {
+                console.log("Using timestamp estimation for subtitle sync");
+                
+                // Create segments from text using smart sentence splitting
+                const text = subtitleData.translated_text;
+                const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+                
+                // Estimate timing - distribute sentences across video duration
+                const duration = videoPlayer.duration || 60; // Default to 60s if duration unknown
+                const avgDuration = duration / sentences.length;
+                
+                // Create estimated segments
+                subtitleData.segments = sentences.map((sentence, i) => ({
+                    text: sentence.trim(),
+                    start: i * avgDuration,
+                    end: (i + 1) * avgDuration - 0.1 // Small gap between segments
+                }));
+            }
+            
+            // Function to find and display current subtitle
+            function updateSubtitle() {
+                if (!videoPlayer || !subtitleData.segments) return;
+                
+                const currentTime = videoPlayer.currentTime;
+                let activeSegment = null;
+                
+                // Find the current segment
+                for (const segment of subtitleData.segments) {
+                    if (currentTime >= segment.start && currentTime <= segment.end) {
+                        activeSegment = segment;
+                        break;
+                    }
+                }
+                
+                // Update display
+                if (activeSegment) {
+                    subtitleText.textContent = activeSegment.text.trim();
+                    subtitleText.style.display = 'inline-block';
+                } else {
+                    subtitleText.textContent = '';
+                    subtitleText.style.display = 'none';
+                }
+            }
+            
+            // Update subtitle on timeupdate for better sync
+            videoPlayer.addEventListener('timeupdate', updateSubtitle);
+            
+            // Use interval as backup to ensure smoother updates
+            activeSubtitleInterval = setInterval(updateSubtitle, 50);
+            
+            // Store cleanup function
+            subtitleData.cleanup = () => {
+                videoPlayer.removeEventListener('timeupdate', updateSubtitle);
+                if (activeSubtitleInterval) {
+                    clearInterval(activeSubtitleInterval);
+                    activeSubtitleInterval = null;
+                }
+            };
+        }
+
+        // Get API URLs
+        function getApiUrls() {
+            const baseUrl =  'http://localhost:8000';
+            return {
+                uploadAudioUrl: `${baseUrl}/upload-audio-video/`,
+                translateUrl: `${baseUrl}/translate-video/`
+            };
+        }
+
+        // Process audio to get transcription with timestamps
+        async function getTranscription(audioBlob, sourceLanguage) {
+            const { uploadAudioUrl } = getApiUrls();
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'audio.webm');
+            
+            try {
+                const response = await fetch(uploadAudioUrl + `?language=${sourceLanguage}&with_timestamps=true`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Transcription failed: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error("Error in transcription:", error);
+                throw error;
+            }
+        }
+
+        // Translate text
+        async function translateText(text, sourceLanguage, targetLanguage, segments = null) {
+            const { translateUrl } = getApiUrls();
+            const payload = {
+                text: text,
+                source_lang: sourceLanguage,
+                target_lang: targetLanguage,
+                segments: segments || []
+            };
+            
+            try {
+                const response = await fetch(translateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Translation failed: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error("Error in translation:", error);
+                throw error;
+            }
+        }
+
+        // Create language badge for subtitle selection
+        function createLanguageBadge(language) {
+            const badge = document.createElement('div');
+            badge.className = 'language-badge';
+            badge.dataset.language = language;
+            
+            // Map language codes to names
+            const languageNames = {
+                'en': 'English',
+                'es': 'Spanish',
+                'fr': 'French',
+                'hi': 'Hindi',
+                'te': 'Telugu',
+                'auto': 'Auto-detected'
+            };
+            
+            badge.textContent = languageNames[language] || language;
+            
+            badge.addEventListener('click', () => {
+                // Remove active class from all badges
+                document.querySelectorAll('.language-badge').forEach(b => {
+                    b.classList.remove('active');
+                });
+                
+                // Add active class to clicked badge
+                badge.classList.add('active');
+                
+                // Clean up previous subtitle syncing
+                if (currentSubtitleLanguage && subtitles[currentSubtitleLanguage] && 
+                    subtitles[currentSubtitleLanguage].cleanup) {
+                    subtitles[currentSubtitleLanguage].cleanup();
+                }
+                
+                // Set current subtitle language and update display
+                currentSubtitleLanguage = language;
+                syncSubtitles(subtitles[language]);
+            });
+            
+            return badge;
+        }
+
+        // Process video and generate subtitles
+        processButton.addEventListener('click', async () => {
+            const videoBlob = videoFileInput.files?.[0];
+            if (!videoBlob) {
+                errorMessage.textContent = 'Please upload a video first.';
+                return;
+            }
+            
+            try {
+                // Disable button and show progress
+                processButton.disabled = true;
+                progressContainer.style.display = 'block';
+                progressFill.style.width = '10%';
+                statusText.textContent = 'Processing video...';
+                errorMessage.textContent = '';
+                
+                // Wait for video metadata if needed
+                if (videoPlayer.readyState < 1) {
+                    await new Promise(resolve => {
+                        videoPlayer.addEventListener('loadedmetadata', resolve, { once: true });
+                    });
+                }
+                
+                progressFill.style.width = '30%';
+                
+                // Get language selections
+                const sourceLanguage = sourceLanguageSelect.value;
+                const targetLanguage = targetLanguageSelect.value;
+                
+                let transcriptionData, translationData;
+                let actualSourceLang;
+                
+                try {
+                    // Extract audio from video
+                    statusText.textContent = 'Extracting audio...';
+                    const audioBlob = await extractAudioFromVideo(videoBlob);
+                    progressFill.style.width = '50%';
+                    statusText.textContent = 'Transcribing audio...';
+                    
+                    // Get transcription from API
+                    transcriptionData = await getTranscription(audioBlob, sourceLanguage);
+                    actualSourceLang = transcriptionData.detected_language || 
+                                      (sourceLanguage === 'auto' ? 'en' : sourceLanguage);
+                    
+                    // Get translation if target language is different
+                    if (targetLanguage !== actualSourceLang) {
+                        progressFill.style.width = '70%';
+                        statusText.textContent = 'Translating subtitles...';
+                        
+                        translationData = await translateText(
+                            transcriptionData.transcription,
+                            actualSourceLang,
+                            targetLanguage,
+                            transcriptionData.segments
+                        );
+                    }
+                } catch (apiError) {
+                    console.error("API Error:", apiError);
+                    errorMessage.textContent = `API Error: ${apiError.message}. Please check API endpoint.`;
+                    progressContainer.style.display = 'none';
+                    processButton.disabled = false;
+                    return;
+                }
+                
+                progressFill.style.width = '90%';
+                statusText.textContent = 'Preparing subtitles...';
+                
+                // Store original language transcription
+                subtitles[actualSourceLang] = {
+                    original_text: transcriptionData.transcription,
+                    translated_text: transcriptionData.transcription,
+                    segments: transcriptionData.segments || []
+                };
+                
+                // Store translation if available
+                if (translationData) {
+                    subtitles[targetLanguage] = {
+                        original_text: transcriptionData.transcription,
+                        translated_text: translationData.translated_text,
+                        segments: translationData.segments || []
+                    };
+                }
+                
+                // Clear existing badges
+                languageBadges.innerHTML = '';
+                
+                // Add badges for available languages
+                Object.keys(subtitles).forEach(lang => {
+                    const badge = createLanguageBadge(lang);
+                    languageBadges.appendChild(badge);
+                    
+                    // If this is the target language, activate it
+                    if (lang === targetLanguage && targetLanguage !== actualSourceLang) {
+                        badge.click();
+                    } else if (lang === actualSourceLang && 
+                              (!targetLanguage || targetLanguage === actualSourceLang)) {
+                        badge.click();
+                    }
+                });
+                
+                // Set default if no language is active
+                if (!currentSubtitleLanguage && Object.keys(subtitles).length > 0) {
+                    currentSubtitleLanguage = Object.keys(subtitles)[0];
+                    const badge = document.querySelector(`.language-badge[data-language="${currentSubtitleLanguage}"]`);
+                    if (badge) badge.click();
+                }
+                
+                progressFill.style.width = '100%';
+                statusText.textContent = 'Subtitles ready!';
+                
+                // Hide progress after delay
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error processing video:', error);
+                errorMessage.textContent = error.message || 'Error processing video. Please try again.';
+                progressContainer.style.display = 'none';
+            } finally {
+                processButton.disabled = false;
+            }
+        });
+
+        // Clean up when leaving the page
+        window.addEventListener('beforeunload', () => {
+            if (videoObjectURL) {
+                URL.revokeObjectURL(videoObjectURL);
+            }
+            
+            if (activeSubtitleInterval) {
+                clearInterval(activeSubtitleInterval);
+            }
+            
+            // Clean up any active subtitle syncing
+            Object.values(subtitles).forEach(sub => {
+                if (sub && sub.cleanup) sub.cleanup();
+            });
+        });
+    </script>
+</body>
+</html>

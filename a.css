@@ -1,0 +1,373 @@
+/* Modern CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+/* Add this at the end of your a.css file or inside a <style>…</style> */
+.hover-arc {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 120px;
+  height: 120px;
+  border-top-left-radius: 60px;
+  background: transparent;
+  z-index: 9999;
+}
+
+.tooltip-arc {
+  position: absolute;
+  bottom: 650px;
+  right: 100px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 18px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.hover-arc:hover .tooltip-arc {
+  opacity: 1;
+}
+.hover-arc-1 {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 120px;
+  height: 900px;
+  border-top-left-radius: 60px;
+  background: transparent;
+  z-index: 199;
+}
+
+.tooltip-arc-1 {
+  position: absolute;
+  bottom: 650px;
+  right: 1100px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 18px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.hover-arc-1:hover .tooltip-arc-1 {
+  opacity: 1;
+}
+
+
+/* Apply a full-screen background with gradient */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
+  height: 100vh;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Header styling */
+h1 {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+  max-width: 80%;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+/* Phone container */
+.phone-container {
+  position: relative;
+  width: 300px;
+  height: 600px;
+  margin: 2rem auto;
+  z-index: 10;
+}
+
+/* Phone frame */
+.phone-frame {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: #111;
+  border-radius: 36px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  border: 8px solid #222;
+}
+
+/* Phone screen */
+.phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* App header */
+.app-header {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.back-button {
+  margin-right: 15px;
+  font-size: 20px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.app-status {
+  margin-left: auto;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* App options container */
+.app-options {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+}
+
+/* Option buttons */
+.option-button {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid #f0f0f0;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  color: #333;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeInUp 0.5s forwards;
+}
+
+.option-button:nth-child(1) {
+  animation-delay: 0.2s;
+}
+
+.option-button:nth-child(2) {
+  animation-delay: 0.4s;
+}
+
+.option-button:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.option-button:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+  background-color: #f9f9f9;
+}
+
+.option-button:active {
+  transform: translateY(0);
+  background-color: #f0f0f0;
+}
+
+.option-button.clicked {
+  animation: clickEffect 0.5s forwards;
+}
+
+@keyframes clickEffect {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.option-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.option-icon.voice {
+  background-color: rgba(0, 198, 255, 0.15);
+  color: #00c6ff;
+}
+
+.option-icon.camera {
+  background-color: rgba(0, 114, 255, 0.15);
+  color: #0072ff;
+}
+
+.option-icon.conversation {
+  background-color: rgba(100, 205, 138, 0.15);
+  color: #64cd8a;
+}
+
+.option-icon i {
+  font-size: 20px;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.option-description {
+  font-size: 13px;
+  color: #777;
+}
+
+/* Character illustrations */
+.character {
+  position: absolute;
+  height: 200px;
+  z-index: 5;
+}
+
+.character.left {
+  left: -100px;
+  bottom: 100px;
+}
+
+.character.right {
+  right: -100px;
+  bottom: 100px;
+}
+
+/* Yellow shape decorations */
+.decoration {
+  position: absolute;
+  z-index: 1;
+}
+
+.decoration.yellow {
+  width: 300px;
+  height: 300px;
+  background-color: rgba(255, 230, 0, 0.5);
+  border-radius: 50%;
+  top: -100px;
+  left: -150px;
+}
+
+.decoration.blue {
+  width: 200px;
+  height: 200px;
+  background-color: rgba(0, 198, 255, 0.3);
+  border-radius: 50%;
+  bottom: -50px;
+  right: -100px;
+}
+
+/* Custom animation for page transition */
+@keyframes pageTransition {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2.2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .phone-container {
+    width: 280px;
+    height: 550px;
+  }
+  
+  .character {
+    height: 150px;
+  }
+}
+
+/* JavaScript for click transitions */
+.js-click-animation {
+  position: relative;
+}
+
+.ripple {
+  position: absolute;
+  background: rgba(0, 198, 255, 0.3);
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}

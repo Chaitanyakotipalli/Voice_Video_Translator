@@ -1,0 +1,258 @@
+/* Global Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-image: url('background5.png'); /* Replace with your image path */
+  background-size: cover;        /* Cover the entire screen */
+  background-position: center;   /* Center the image */
+  background-repeat: no-repeat;  /* Prevent tiling */
+  background-attachment: fixed;  /* Keep it fixed during scroll */
+  background-color: #f9f3e0;  /* Warm beige background to match the image */
+  color: #4a3f35;
+  line-height: 1.6;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+a {
+  color: #3498db;
+  text-decoration: none;
+  margin-bottom: 20px;
+  display: inline-block;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Main Container */
+.main-container {
+  padding-top: 200px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header Section */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+h1 {
+  font-size: 2.5rem;
+  color: #8b5d33;  /* Warm brown color */
+  margin-bottom: 15px;
+}
+
+/* Mode Selection Buttons */
+.mode-selection {
+  display: flex;
+  
+  justify-content: center;
+  gap: 600px;
+  margin: 500px 0;
+}
+
+.mode-btn {
+  padding: 15px 30px;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #d4a76a;  /* Wooden desk color from image */
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.mode-btn:hover {
+  background-color: #c0894a;
+  transform: translateY(-2px);
+}
+
+/* Content Sections */
+.app-content {
+  display: none;
+}
+
+/* Container Layout */
+.container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Panel Styles */
+.panel {
+  background-color: #ffffff;
+  border: 1px solid #e1e1e1;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.panel h3 {
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+  color: #8b5d33;
+  border-bottom: 2px solid #f0e6d2;
+  padding-bottom: 8px;
+}
+
+/* Controls: Selects and Buttons */
+.controls {
+  margin: 15px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+label {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #5a4a3f;
+}
+
+select {
+  padding: 8px 12px;
+  border: 1px solid #d4a76a;
+  border-radius: 6px;
+  margin-right: 10px;
+  background-color: #fff;
+  color: #5a4a3f;
+}
+
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Specific Button Styles */
+#realtimeBtn, #recordBtn, #uploadBtn {
+  background-color: #5a8a70;  /* Greenish color */
+  color: #fff;
+}
+
+#realtimeBtn:hover:not(:disabled), #recordBtn:hover:not(:disabled), #uploadBtn:hover:not(:disabled) {
+  background-color: #4a7860;
+}
+
+#realtimeStopBtn, #stopBtn {
+  background-color: #c17a7a;  /* Reddish color */
+  color: #fff;
+}
+
+#realtimeStopBtn:hover:not(:disabled), #stopBtn:hover:not(:disabled) {
+  background-color: #b16a6a;
+}
+
+#transcribeBtn {
+  background-color: #7a94c1;  /* Blueish color */
+  color: #fff;
+}
+
+#transcribeBtn:hover:not(:disabled) {
+  background-color: #6a84b1;
+}
+
+.speak-button {
+  display: inline-flex;
+  align-items: center;
+  background-color: #d4a76a;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.speak-button:hover:not(:disabled) {
+  background-color: #c0894a;
+}
+
+.speak-button:disabled {
+  background-color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.speak-icon {
+  margin-right: 5px;
+}
+
+/* Toggle & Checkbox */
+.checkbox-container {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+}
+
+input[type='checkbox'] {
+  margin-right: 10px;
+  transform: scale(1.2);
+}
+
+/* Text Displays */
+.text-display {
+  background-color: #f9f9f9;
+  border: 1px solid #e9e1d4;
+  border-radius: 6px;
+  padding: 15px;
+  min-height: 60px;
+  margin: 10px 0;
+  white-space: pre-wrap;
+  color: #5a4a3f;
+}
+
+.display-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 15px;
+  font-weight: bold;
+  color: #8b5d33;
+}
+
+/* Audio Player */
+audio {
+  width: 100%;
+  margin: 15px 0;
+  border-radius: 30px;
+}
+
+/* Spinner */
+.spinner {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(212, 167, 106, 0.3);
+  border-top: 3px solid #d4a76a;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice & Video Translation</title>
+  <link rel="stylesheet" href="a.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <h1>Playing with Voices</h1>
+  <p class="subtitle">Instant Text Translation into Any Language</p>
+  
+  <div class="phone-container">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="app-header">
+          <div class="back-button">
+            <i class="fas fa-chevron-left"></i>
+          </div>
+          <div class="app-title">Translate</div>
+          <div class="app-status">No Gpts</div>
+        </div>
+        
+        <div class="app-options">
+          <!-- Voice Translation Option -->
+          <a href="page3.html" class="option-button js-click-animation">
+            <div class="option-icon voice">
+              <i class="fas fa-microphone"></i>
+            </div>
+            <div class="option-content">
+              <div class="option-title">Voice Translation</div>
+              <div class="option-description">Translate spoken words instantly</div>
+            </div>
+          </a>
+          
+          <!-- Camera Translation Option -->
+          <a href="page2.html" class="option-button js-click-animation">
+            <div class="option-icon camera">
+              <i class="fas fa-camera"></i>
+            </div>
+            <div class="option-content">
+              <div class="option-title">Video Translation</div>
+              <div class="option-description">Generates Subtitles For the Video</div>
+            </div>
+          </a>
+          
+          <!-- Conversation Option -->
+          <a href="page3.html" class="option-button js-click-animation">
+            <div class="option-icon conversation">
+              <i class="fas fa-comments"></i>
+            </div>
+            <div class="option-content">
+              <div class="option-title">Conversation</div>
+              <div class="option-description">Real-time translation chat</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="hover-arc">
+    <div class="tooltip-arc">Done By : Chaitanya Kotipalli</div>
+  </div>
+  <div class="hover-arc-1">
+    <div class="tooltip-arc-1">IT WorkshopP Project</div>
+  </div>
+  <!-- Decorative elements -->
+  <div class="decoration yellow"></div>
+  <div class="decoration blue"></div>
+  <img src="character-left.png" alt="" class="character left">
+  <img src="character-right.png" alt="" class="character right">
+
+  <script>
+    // Animation for button clicks
+    document.querySelectorAll('.js-click-animation').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Create ripple effect
+        const ripple = document.createElement('span');
+        ripple.classList.add('ripple');
+        this.appendChild(ripple);
+        
+        // Position the ripple
+        const rect = this.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        ripple.style.width = ripple.style.height = `${size}px`;
+        ripple.style.left = `${e.clientX - rect.left - size/2}px`;
+        ripple.style.top = `${e.clientY - rect.top - size/2}px`;
+        
+        // Add clicked class for the animation
+        this.classList.add('clicked');
+        
+        // Navigate after animation completes
+        const href = this.getAttribute('href');
+        setTimeout(() => {
+          window.location.href = href;
+        }, 500);
+      });
+    });
+
+    // Clean up ripples after animation
+    document.addEventListener('animationend', function(e) {
+      if (e.target.classList.contains('ripple')) {
+        e.target.remove();
+      }
+    });
+  </script>
+</body>
+</html>

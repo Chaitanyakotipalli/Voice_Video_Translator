@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice Translator</title>
+  <link rel="stylesheet" href="d.css">
+</head>
+<body>
+  <div class="main-container">
+    <div class="header">
+      <h1>Voice Translator</h1>
+      <a href="index.html">Go to home</a>
+    </div>
+    
+    <!-- Mode Selection Buttons -->
+    <div class="mode-selection">
+      <button id="realTimeMode" class="mode-btn">Real-time Mode</button>
+      <button id="normalMode" class="mode-btn">Normal Mode</button>
+    </div>
+    
+    <!-- Real-time Mode Content -->
+    <div id="realTimeModeContent" class="app-content">
+      <div class="container">
+        <!-- Language Settings Panel -->
+        <div class="panel">
+          <h3>Language Settings</h3>
+          <div class="controls">
+            <label>Input Language:</label>
+            <select id="rtInputLang">
+              <option value="en">English</option>
+              <option value="te">Telugu</option>
+              <option value="hi">Hindi</option>
+              <option value="fr">French</option>
+              <option value="es">Spanish</option>
+            </select>
+            <label>Output Language:</label>
+            <select id="rtOutputLang">
+              <option value="en">English</option>
+              <option value="te">Telugu</option>
+              <option value="hi">Hindi</option>
+              <option value="fr">French</option>
+              <option value="es">Spanish</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Realtime Translation -->
+        <div class="panel">
+          <h3>Real-time Voice Translation</h3>
+          <div class="controls">
+            <button id="realtimeBtn">Start Real-time Translation</button>
+            <button id="realtimeStopBtn" disabled>Stop</button>
+            <span id="realtimeSpinner" class="spinner"></span>
+          </div>
+          
+          <div class="display-label">Transcription:</div>
+          <div id="realtimeTranscription" class="text-display"></div>
+          
+          <div class="display-label">
+            Translation:
+            <button id="realtimeSpeakBtn" class="speak-button" disabled>
+              <span class="speak-icon">🔊</span> Speak
+            </button>
+          </div>
+          <div id="realtimeTranslation" class="text-display"></div>
+          
+          <div class="checkbox-container">
+            <input type="checkbox" id="autoSpeakToggle" />
+            <label for="autoSpeakToggle">🔊 Auto-speak translation</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Normal Mode Content -->
+    <div id="normalModeContent" class="app-content">
+      <div class="container">
+        <!-- Language Settings Panel -->
+        <div class="panel">
+          <h3>Language Settings</h3>
+          <div class="controls">
+            <label>Input Language:</label>
+            <select id="inputLang">
+              <option value="en">English</option>
+              <option value="te">Telugu</option>
+              <option value="hi">Hindi</option>
+              <option value="fr">French</option>
+              <option value="es">Spanish</option>
+            </select>
+            <label>Output Language:</label>
+            <select id="outputLang">
+              <option value="en">English</option>
+              <option value="te">Telugu</option>
+              <option value="hi">Hindi</option>
+              <option value="fr">French</option>
+              <option value="es">Spanish</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Complete Recording Panel -->
+        <div class="panel">
+          <h3>Complete Recording</h3>
+          <div class="controls">
+            <button id="recordBtn">Start Recording</button>
+            <button id="stopBtn" disabled>Stop</button>
+            <button id="transcribeBtn" disabled>Transcribe & Translate</button>
+            <span id="recordSpinner" class="spinner"></span>
+          </div>
+          
+          <div class="controls">
+            <input type="file" id="audioFile" accept="audio/*" style="display:none;">
+            <button id="uploadBtn">Upload Audio File</button>
+          </div>
+          
+          <audio id="audioPlayer" controls style="display:none;"></audio>
+          
+          <div class="display-label">Transcription:</div>
+          <div id="transcription" class="text-display"></div>
+          
+          <div class="display-label">
+            Translation:
+            <button id="translationSpeakBtn" class="speak-button" disabled>
+              <span class="speak-icon">🔊</span> Speak
+            </button>
+          </div>
+          <div id="translation" class="text-display"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // overlap + window
+      const CHUNK_MS   = 3000;  // total length of each capture
+      const OVERLAP_MS = 500;   // how much to re-capture at the start of next chunk
+      const STEP_MS    = CHUNK_MS - OVERLAP_MS;
+      let lastTranscribed = "";
+      let lastTranslated = "";
+
+      // Configuration
+      const config = {
+        backendURL: "http://127.0.0.1:8000",
+        realtimeChunkDuration: 3000, // 3 seconds
+      };
+
+      // State management
+      const state = {
+        mediaRecorder: null,
+        fullRecoder: null,
+        audioChunks: [],
+        fullAudioChunks: [],
+        recordingStream: null,
+        isRealTimeMode: false,
+        mimeType: determineAudioMimeType(),
+        isSpeaking: false
+      };
+
+      // Cache DOM elements - mode buttons
+      const modeBtn = {
+        realTimeMode: document.getElementById('realTimeMode'),
+        normalMode: document.getElementById('normalMode'),
+        realTimeModeContent: document.getElementById('realTimeModeContent'),
+        normalModeContent: document.getElementById('normalModeContent')
+      };
+
+      // Cache Real-time Mode elements
+      const rtEl = {
+        inputLang: document.getElementById('rtInputLang'),
+        outputLang: document.getElementById('rtOutputLang'),
+        realtimeBtn: document.getElementById('realtimeBtn'),
+        realtimeStopBtn: document.getElementById('realtimeStopBtn'),
+        realtimeTranscription: document.getElementById('realtimeTranscription'),
+        realtimeTranslation: document.getElementById('realtimeTranslation'),
+        realtimeSpinner: document.getElementById('realtimeSpinner'),
+        realtimeSpeakBtn: document.getElementById('realtimeSpeakBtn'),
+        autoSpeakToggle: document.getElementById('autoSpeakToggle')
+      };
+
+      // Cache Normal Mode elements
+      const el = {
+        inputLang: document.getElementById('inputLang'),
+        outputLang: document.getElementById('outputLang'),
+        recordBtn: document.getElementById('recordBtn'),
+        stopBtn: document.getElementById('stopBtn'),
+        transcribeBtn: document.getElementById('transcribeBtn'),
+        recordSpinner: document.getElementById('recordSpinner'),
+        audioFile: document.getElementById('audioFile'),
+        uploadBtn: document.getElementById('uploadBtn'),
+        audioPlayer: document.getElementById('audioPlayer'),
+        transcription: document.getElementById('transcription'),
+        translation: document.getElementById('translation'),
+        translationSpeakBtn: document.getElementById('translationSpeakBtn')
+      };
+
+      // Mode switching functions
+      function showRealTimeMode() {
+        modeBtn.realTimeModeContent.style.display = "block";
+        modeBtn.normalModeContent.style.display = "none";
+        state.isRealTimeMode = true;
+      }
+
+      function showNormalMode() {
+        modeBtn.realTimeModeContent.style.display = "none";
+        modeBtn.normalModeContent.style.display = "block";
+        state.isRealTimeMode = false;
+      }
+
+      // Helper Functions
+      function determineAudioMimeType() {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+        if (MediaRecorder.isTypeSupported('audio/webm')) return 'audio/webm';
+        return '';
+      }
+
+      function toggleSpinner(spinner, show) {
+        spinner.style.display = show ? 'inline-block' : 'none';
+      }
+
+      function showError(message) {
+        alert(message);
+        console.error(message);
+      }
+
+      function appendText(element, text) {
+        if (text && text.trim()) {
+          if (element.innerText && !element.innerText.endsWith(" ")) {
+            element.innerText += " " + text;
+          } else {
+            element.innerText = text;
+          }
+        }
+      }
+
+      // API Functions
+      async function fetchAPI(url, options = {}) {
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) throw new Error(`Server error: ${response.status}`);
+          return await response.json();
+        } catch (error) {
+          console.error("API Error:", error);
+          throw error;
+        }
+      }
+
+      async function transcribeAudio(audioBlob, inputLang) {
+        const formData = new FormData();
+        formData.append("file", audioBlob, "audio.webm");
+        
+        return fetchAPI(`${config.backendURL}/upload-audio/?language=${inputLang}`, {
+          method: "POST", 
+          body: formData
+        });
+      }
+
+      async function translateText(text, sourceLang, targetLang) {
+        return fetchAPI(`${config.backendURL}/translate/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            source_lang: sourceLang,
+            target_lang: targetLang
+          })
+        });
+      }
+
+      // Speech Synthesis Functions
+      async function speakText(text, lang) {
+        if (state.isSpeaking) return;
+        
+        try {
+          state.isSpeaking = true;
+          
+          // Use the backend TTS API
+          const response = await fetch(
+            `${config.backendURL}/text-to-speech/?text=${encodeURIComponent(text)}&lang=${lang}`,
+            { method: "POST" }
+          );
+          
+          if (!response.ok) throw new Error(`Server error: ${response.status}`);
+          
+          const audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          const audio = new Audio(audioUrl);
+          
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            state.isSpeaking = false;
+          };
+          
+          audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            state.isSpeaking = false;
+            showError("Error playing audio");
+          };
+          
+          audio.play();
+        } catch (error) {
+          state.isSpeaking = false;
+          showError(`Text-to-speech error: ${error.message}`);
+        }
+      }
+
+      // Real-time Translation Functions
+      async function startRealTimeMode() {
+        try {
+          // Reset displays
+          rtEl.realtimeTranscription.innerText = "";
+          rtEl.realtimeTranslation.innerText = "";
+          rtEl.realtimeSpeakBtn.disabled = true;
+          
+          // Get audio stream
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          state.recordingStream = stream;
+          state.isRealTimeMode = true;
+          state.fullAudioChunks = [];
+          state.fullRecoder = new MediaRecorder(stream, { mimeType: state.mimeType });
+          state.fullRecoder.ondataavailable = e => {
+            if (e.data.size > 0) {
+              state.fullAudioChunks.push(e.data);
+            }
+          };
+          state.fullRecoder.start();
+          
+          // Update UI
+          rtEl.realtimeBtn.disabled = true;
+          rtEl.realtimeStopBtn.disabled = false;
+          toggleSpinner(rtEl.realtimeSpinner, true);
+          
+          // Start processing
+          processRealTimeAudio(stream);
+        } catch (err) {
+          showError(`Microphone error: ${err.message}`);
+          stopRealTimeMode();
+        }
+      }
+
+      function stopRealTimeMode() {
+        state.isRealTimeMode = false;
+        rtEl.realtimeBtn.disabled = false;
+        rtEl.realtimeStopBtn.disabled = true;
+        toggleSpinner(rtEl.realtimeSpinner, false);
+        
+        if (state.mediaRecorder && state.mediaRecorder.state === "recording") {
+          state.mediaRecorder.stop();
+        }
+        if (state.fullRecoder && state.fullRecoder.state === "recording") {
+          state.fullRecoder.stop();
+        }
+        if (state.recordingStream) {
+          state.recordingStream.getTracks().forEach(track => track.stop());
+          state.recordingStream = null;
+        }
+        
+        if (state.fullRecoder) {
+          state.fullRecoder.onstop = async () => {
+            const fullBlob = new Blob(state.fullAudioChunks, { type: state.mimeType });
+            try {
+              // transcribe entire session
+              const { transcription } = await transcribeAudio(fullBlob, rtEl.inputLang.value);
+              rtEl.realtimeTranscription.innerText = transcription || "";
+
+              // translate entire session
+              const { translated_text } = await translateText(
+                transcription,
+                rtEl.inputLang.value,
+                rtEl.outputLang.value
+              );
+              rtEl.realtimeTranslation.innerText = translated_text || "";
+              
+              // Enable speak button if there's translated text
+              rtEl.realtimeSpeakBtn.disabled = !translated_text;
+
+            } catch (err) {
+              showError(`Final processing error: ${err.message}`);
+            }
+          };
+        }
+      }
+
+      async function processRealTimeAudio(stream) {
+        if (!state.isRealTimeMode) return;
+        state.audioChunks = [];
+        state.mediaRecorder = new MediaRecorder(stream, { mimeType: state.mimeType });
+
+        state.mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) state.audioChunks.push(e.data);
+        };
+
+        state.mediaRecorder.onstop = async () => {
+          if (!state.isRealTimeMode) return;
+          const blob = new Blob(state.audioChunks, { type: state.mimeType });
+          if (blob.size > 44) {
+            try {
+              const { transcription } = await transcribeAudio(blob, rtEl.inputLang.value);
+              let newText = transcription.replace(lastTranscribed, "").trim();
+              if (newText) {
+                appendText(rtEl.realtimeTranscription, newText);
+                lastTranscribed += " " + newText;
+              }
+
+              const { translated_text } = await translateText(
+                newText || transcription,
+                rtEl.inputLang.value,
+                rtEl.outputLang.value
+              );
+              if (translated_text) {
+                appendText(rtEl.realtimeTranslation, translated_text.replace(lastTranslated, "").trim());
+                lastTranslated += " " + translated_text;
+              }
+
+              rtEl.realtimeSpeakBtn.disabled = !translated_text;
+              if (rtEl.autoSpeakToggle.checked && translated_text) {
+                speakText(translated_text, rtEl.outputLang.value);
+              }
+            } catch (err) {
+              console.error("Chunk error", err);
+            }
+          }
+
+          // schedule next chunk with overlap
+          setTimeout(() => processRealTimeAudio(stream), STEP_MS);
+        };
+
+        state.mediaRecorder.start();
+        // stop this chunk after CHUNK_MS
+        setTimeout(() => {
+          if (state.mediaRecorder.state === "recording") state.mediaRecorder.stop();
+        }, CHUNK_MS);
+      }
+
+      // Full Recording Functions
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          state.recordingStream = stream;
+          
+          state.audioChunks = [];
+          state.mediaRecorder = new MediaRecorder(stream, { mimeType: state.mimeType });
+          
+          state.mediaRecorder.ondataavailable = event => {
+            if (event.data && event.data.size > 0) {
+              state.audioChunks.push(event.data);
+            }
+          };
+          
+          state.mediaRecorder.start();
+          
+          // Update UI
+          el.recordBtn.disabled = true;
+          el.stopBtn.disabled = false;
+          el.transcribeBtn.disabled = true;
+          el.audioPlayer.style.display = "none";
+          el.transcription.innerText = "";
+          el.translation.innerText = "";
+          el.translationSpeakBtn.disabled = true;
+        } catch (err) {
+          showError(`Microphone error: ${err.message}`);
+        }
+      }
+
+      function stopRecording() {
+        if (state.mediaRecorder && state.mediaRecorder.state === "recording") {
+          state.mediaRecorder.stop();
+          
+          // Update UI
+          el.recordBtn.disabled = false;
+          el.stopBtn.disabled = true;
+          el.transcribeBtn.disabled = false;
+          
+          state.mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(state.audioChunks, { type: state.mimeType });
+            
+            el.audioPlayer.src = URL.createObjectURL(audioBlob);
+            el.audioPlayer.style.display = "block";
+            
+            // Release media stream
+            if (state.recordingStream) {
+              state.recordingStream.getTracks().forEach(track => track.stop());
+              state.recordingStream = null;
+            }
+          };
+        }
+      }
+
+      async function transcribeRecording() {
+        if (state.audioChunks.length === 0) {
+          showError("No recording found");
+          return;
+        }
+        
+        const audioBlob = new Blob(state.audioChunks, { type: state.mimeType });
+        
+        // Update UI
+        toggleSpinner(el.recordSpinner, true);
+        el.transcribeBtn.disabled = true;
+        el.translationSpeakBtn.disabled = true;
+        
+        try {
+          // Transcribe audio
+          const transcriptionData = await transcribeAudio(audioBlob, el.inputLang.value);
+          
+          if (transcriptionData.transcription) {
+            el.transcription.innerText = transcriptionData.transcription;
+            
+            // Translate the transcription
+            const translationData = await translateText(
+              transcriptionData.transcription,
+              el.inputLang.value,
+              el.outputLang.value
+            );
+            
+            if (translationData.translated_text) {
+              el.translation.innerText = translationData.translated_text;
+              el.translationSpeakBtn.disabled = false;
+            }
+          }
+        } catch (error) {
+          showError(`Processing error: ${error.message}`);
+        } finally {
+          toggleSpinner(el.recordSpinner, false);
+          el.transcribeBtn.disabled = false;
+        }
+      }
+
+      // File Upload Functions
+      function handleFileUpload() {
+        el.audioFile.click();
+      }
+
+      async function processUploadedFile() {
+        if (!el.audioFile.files || !el.audioFile.files[0]) return;
+        
+        // Update UI
+        toggleSpinner(el.recordSpinner, true);
+        el.uploadBtn.disabled = true;
+        el.transcription.innerText = "";
+        el.translation.innerText = "";
+        el.translationSpeakBtn.disabled = true;
+        
+        try {
+          const formData = new FormData();
+          formData.append("file", el.audioFile.files[0]);
+          
+          // Transcribe uploaded file
+          const transcriptionData = await fetchAPI(
+            `${config.backendURL}/upload-audio/?language=${el.inputLang.value}`,
+            { method: "POST", body: formData }
+          );
+          
+          if (transcriptionData.transcription) {
+            el.transcription.innerText = transcriptionData.transcription;
+            
+            // Create audio player for the uploaded file
+            el.audioPlayer.src = URL.createObjectURL(el.audioFile.files[0]);
+            el.audioPlayer.style.display = "block";
+            
+            // Translate the transcription
+            const translationData = await translateText(
+              transcriptionData.transcription,
+              el.inputLang.value,
+              el.outputLang.value
+            );
+            
+            if (translationData.translated_text) {
+              el.translation.innerText = translationData.translated_text;
+              el.translationSpeakBtn.disabled = false;
+            }
+          } else {
+            showError("Failed to transcribe audio");
+          }
+        } catch (error) {
+          showError(`File processing error: ${error.message}`);
+        } finally {
+          toggleSpinner(el.recordSpinner, false);
+          el.uploadBtn.disabled = false;
+        }
+      }
+
+      // Initialize
+      function init() {
+        // Check browser support
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+          showError("Your browser doesn't support audio recording. Please use Chrome, Firefox, or Edge.");
+          rtEl.realtimeBtn.disabled = true;
+          el.recordBtn.disabled = true;
+          return;
+        }
+        
+        // Show Normal Mode content by default
+        showNormalMode();
+        
+        // Add mode selection event listeners
+        modeBtn.realTimeMode.addEventListener('click', showRealTimeMode);
+        modeBtn.normalMode.addEventListener('click', showNormalMode);
+        
+        // Add real-time mode event listeners
+        rtEl.realtimeBtn.addEventListener('click', startRealTimeMode);
+        rtEl.realtimeStopBtn.addEventListener('click', stopRealTimeMode);
+        rtEl.realtimeSpeakBtn.addEventListener('click', () => {
+          const text = rtEl.realtimeTranslation.innerText;
+          if (text) {
+            speakText(text, rtEl.outputLang.value);
+          }
+        });
+        
+        // Add normal mode event listeners
+        el.recordBtn.addEventListener('click', startRecording);
+        el.stopBtn.addEventListener('click', stopRecording);
+        el.transcribeBtn.addEventListener('click', transcribeRecording);
+        el.uploadBtn.addEventListener('click', handleFileUpload);
+        el.audioFile.addEventListener('change', processUploadedFile);
+        
+        // Add speak button event listener for normal mode
+        el.translationSpeakBtn.addEventListener('click', () => {
+          const text = el.translation.innerText;
+          if (text) {
+            speakText(text, el.outputLang.value);
+          }
+        });
+      }
+      
+      // Initialize when DOM is loaded
+      window.addEventListener('DOMContentLoaded', init);
+    })();
+  </script>
+</body>
+</html>
