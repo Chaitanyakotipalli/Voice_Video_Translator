@@ -36,7 +36,6 @@ A powerful app that transcribes, translates, and synthesizes speech, enabling yo
 Clone the repository and follow the instructions to run the app locally:
 
 ```bash
-git clone <your-repo-link>
-cd <your-repo-folder>
-pip install -r requirements.txt
-python app.py
+git clone https://github.com/Chaitanyakotipalli/Voice_Video_Translator.git
+cd Voice_Videp_Translator
+python main.py
