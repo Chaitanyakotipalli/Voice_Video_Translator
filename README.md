@@ -1,6 +1,6 @@
 # Multilingual Subtitle & Voice Translation App 🎬🌐
 
-A powerful app that transcribes, translates, and synthesizes speech, enabling you to enjoy videos, movies, or lectures in **any language** with synchronized subtitles and voice translation.
+A user_friendly app that transcribes, translates, and synthesizes speech, enabling you to enjoy videos, movies, or lectures in **any language** with synchronized subtitles and voice translation.
 
 ## Features ✨
 
